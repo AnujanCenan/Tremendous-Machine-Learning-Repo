@@ -51,7 +51,6 @@ Row_Info* get_row(FILE* f)
 
         } else 
         {
-            // curr_field = insert_into_field(curr_field, c, &field_idx, &field_capacity);
             Field_Info_append(curr_field_info, c);
         }
 

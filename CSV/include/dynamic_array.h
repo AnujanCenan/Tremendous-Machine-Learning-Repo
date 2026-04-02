@@ -17,35 +17,42 @@
  * capacity given as a parameter.
  */
 #define DECLARE_DYNAMIC_ARRAY(type, label) \
-    typedef struct {                \
-        type* data;                 \
-        size_t size;                \
-        size_t capacity;            \
-    } label;       \
-                                    \
-    void label##_append(label* arr, type value)    \
+    typedef struct { \
+        type* data; \
+        size_t size; \
+        size_t capacity; \
+    } label; \
+    \
+    void label##_append(label* arr, type value) \
     { \
         if (arr->size >= arr->capacity) \
         { \
-            printf("Need to realloc; capacity to small\n"); \
             arr->capacity = arr->capacity > 0 ? arr->capacity * 2 : 1; \
             arr->data = realloc(arr->data, sizeof(type) * arr->capacity); \
         } \
-        if (arr->data == NULL) \
+        if (!(arr->data)) \
         { \
-            printf("Realloc seems to have failed -- may cause data issues!\n"); \
+            printf("In dynamic_array.h._append: Realloc seems to have failed -- may cause data issues!\n"); \
         } \
         arr->data[(arr->size)++] = value; \
     } \
     \
     label* label##_init(int capacity) \
-    {   \
+    { \
         label* template = malloc( sizeof(label) ); \
+        if (!template) \
+        { \
+            fprintf(stderr, "In dynamic_array.h._init: Failed to malloc the template\n"); \
+        } \
         template->size = 0; \
-        template->capacity = capacity; \
+        template->capacity = capacity;\
         template->data = malloc(capacity * sizeof(type)); \
+        if (!(template->data)) \
+        { \
+            fprintf(stderr, "In dynamic_array.h._init: Failed to malloc the template->data\n"); \
+        } \
         return template; \
-    }   \
+    } \
 
 
 # endif // DYNAMIC_ARRAY_H
