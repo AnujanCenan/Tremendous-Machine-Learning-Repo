@@ -11,6 +11,10 @@
  * 
  * _append function allows a new element of type _type_ to be added to the end of 
  * the dynamic array. Handles reallocation if capacity is full.
+ * 
+ * _init function creates a new instance of the struct, initialising all fields to
+ * 'default' values; empty malloced array, size == 0 and a capacity set to the 
+ * capacity given as a parameter.
  */
 #define DECLARE_DYNAMIC_ARRAY(type, label) \
     typedef struct {                \
@@ -32,7 +36,16 @@
             printf("Realloc seems to have failed -- may cause data issues!\n"); \
         } \
         arr->data[(arr->size)++] = value; \
-    }
+    } \
+    \
+    label* label##_init(int capacity) \
+    {   \
+        label* template = malloc( sizeof(label) ); \
+        template->size = 0; \
+        template->capacity = capacity; \
+        template->data = malloc(capacity * sizeof(type)); \
+        return template; \
+    }   \
 
 
 # endif // DYNAMIC_ARRAY_H
