@@ -1,29 +1,7 @@
 #include "../include/csv.h"
 
-/**
- * Freeing all malloced resources in this file.
- * Frees the 'strings' (field values) in each row array
- * Frees all of the row arrays
- * Frees the all_rows array.
- * Frees the all_rows_info wrapper.
- */
-void free_resources(All_Rows* all_rows_info)
-{
-    // Row_Info* row_info = all_rows_info.data;
-    
-    for (int i = 0; i < all_rows_info->size; ++i)
-    {
-        Row_Info* row_info = all_rows_info->data[i];
-        for (int j = 0; j < row_info->size; ++j)
-        {
-            free(row_info->data[j]);
-        }
+/////////////////////////////////// PRIVATE ////////////////////////////////////
 
-        free(row_info);
-    }
-
-    free(all_rows_info);
-}
 
 /**
  * Inserts (a string value) into the given row/line
@@ -121,6 +99,31 @@ Row_Info* get_row(FILE* f)
 }
 //////////////////////////////////// PUBLIC ////////////////////////////////////
 
+/**
+ * Freeing all malloced resources in this file.
+ * Frees the 'strings' (field values) in each row array
+ * Frees all of the row arrays
+ * Frees the all_rows array.
+ * Frees the all_rows_info wrapper.
+ */
+void free_resources(All_Rows* all_rows_info)
+{
+    // Row_Info* row_info = all_rows_info.data;
+    
+    for (int i = 0; i < all_rows_info->size; ++i)
+    {
+        Row_Info* row_info = all_rows_info->data[i];
+        for (int j = 0; j < row_info->size; ++j)
+        {
+            free(row_info->data[j]);
+        }
+
+        free(row_info);
+    }
+
+    free(all_rows_info);
+}
+
 // The final function will have the following properties
 /**
  * Parameters
@@ -200,6 +203,7 @@ void print_extracted_csv(All_Rows* all_rows)
     }
 }
 
+////////////////////////////////// ENTRYPOINT //////////////////////////////////
 
 int main()
 {
