@@ -1,17 +1,34 @@
-#include "../include/csv.h"
+// #include "../include/csv.h"
+
+#include <string.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <stdbool.h>
 
 #define INIT_NUM_COLS 1000
 #define MAX_VALUE_LENGTH 100
 #define INIT_NUM_LINES 20 
 
-#define DECLARE_DYNAMIC_ARRAY(type, type_name) \
+/**
+ * Macro for generically typed dynamic arrays
+ * Parameters
+ * - type: the type that each object in the array has
+ * e.g. if type == int, then this is an integer array
+ * - label: the name given to the struct; basically the type name for the struct
+ * 
+ * 
+ * _append function allows a new element of type _type_ to be added to the end of 
+ * the dynamic array. Handles reallocation if capacity is full.
+ */
+#define DECLARE_DYNAMIC_ARRAY(type, label) \
     typedef struct {                \
         type* data;                 \
         size_t size;                \
         size_t capacity;            \
-    } type_name;       \
+    } label;       \
                                     \
-    static inline void type_name##_append(type_name* arr, type value)    \
+    void label##_append(label* arr, type value)    \
     { \
         if (arr->size >= arr->capacity) \
         { \
@@ -80,7 +97,15 @@ char* insert_into_field(char* field, char c, int* field_idx, int* field_capacity
     return field;
 }
 
-// private
+/**
+ * Extracts the values from a particular line of a csv file. Mallocs a Row_Info and
+ * 
+ * chucks those values into a Row_Info dynamic array (vector<char *>).
+ * Returns that Row_Info's address
+ * 
+ * Parameters:
+ * - f: the file pointer. Assumes the file pointer points to the first byte of a line
+ */
 Row_Info* get_row(FILE* f)
 {
     Row_Info* csv_row_info = malloc(sizeof(Row_Info));
@@ -93,10 +118,8 @@ Row_Info* get_row(FILE* f)
     int field_capacity = MAX_VALUE_LENGTH;
     char* curr_field = malloc(field_capacity * sizeof(char *));
 
-
     int row_idx = 0;
     int field_idx = 0;
-
 
     char c = fgetc(f);
     bool opened_quotes = false;
@@ -124,7 +147,6 @@ Row_Info* get_row(FILE* f)
             }
         } else if (c == ',' && !opened_quotes)
         {
-            // curr_field[field_idx++] = '\0';
             curr_field = insert_into_field(curr_field, '\0', &field_idx, &field_capacity);
             
             Row_Info_append(csv_row_info, curr_field);
@@ -133,9 +155,7 @@ Row_Info* get_row(FILE* f)
             field_idx = 0;
         } else 
         {
-            // curr_field[field_idx++] = c;
             curr_field = insert_into_field(curr_field, c, &field_idx, &field_capacity);
-
         }
 
         c = fgetc(f);
@@ -144,38 +164,31 @@ Row_Info* get_row(FILE* f)
     if (field_idx > 0)
     {
         curr_field[field_idx++] = '\0';
-        // row[row_idx++] = curr_field;
-        // row = insert_into_row(row, curr_field, &row_idx, &row_capacity); 
         Row_Info_append(csv_row_info, curr_field);
     }
 
     return csv_row_info;
 }
-
+//////////////////////////////////// PUBLIC ////////////////////////////////////
 
 // The final function will have the following properties
 /**
  * Parameters
- * - Filename
- * - hasHeaders <boolean flag>
+ * - file_ptr: an opened file ptr (naturally should point to a .csv file)
+ * - hasHeaders: should be set to true if and only if the first line in the csv
+ * file is a header line
  * 
  * Returns:
  * - all_rows <All_Rows_Info *>
- * 
- * Accompanied with a free_resources function which, given all_rows (should) free
- * all memory
  */
 
-int main()
+All_Rows* get_all_rows(FILE* file_ptr, bool headers)
 {
-    FILE* file_ptr = fopen("./example.csv", "r");
     if (file_ptr == NULL)
     {
-        fprintf(stderr, "Failed to open the file\n");
+        fprintf(stderr, "file_ptr is null - potentially failed to open file\n");
         exit(1);
     }
-
-    bool headers = true;
 
     if (headers)
     {
@@ -186,9 +199,6 @@ int main()
         }
     }
 
-    int all_row_capacity = INIT_NUM_LINES;
-
-    // Csv_Row_Info** all_rows = malloc(all_row_capacity * sizeof(Csv_Row_Info*));
     All_Rows* all_rows = malloc(sizeof(All_Rows));
     all_rows->capacity = INIT_NUM_LINES;
     all_rows->data = malloc(INIT_NUM_LINES * sizeof(Row_Info *));
@@ -203,6 +213,20 @@ int main()
         c = fgetc(file_ptr);
     }
 
+    fclose(file_ptr);
+
+    return all_rows;
+}
+
+
+/**
+ * Roughly prints the csv file contents (after extraction) in the same grid 
+ * structure as the original csv
+ * 
+ * Primarily for debugging purposes
+ */
+void print_extracted_csv(All_Rows* all_rows)
+{
     int global_num_fields = -1;
 
     for (int row_num = 0; row_num < all_rows->size; ++row_num)
@@ -224,10 +248,16 @@ int main()
 
         printf("\n");
     }
+}
 
-    // All_Rows_Info* all_rows_info = malloc(sizeof(All_Rows_Info));     // 0.012
-    // all_rows_info->num_rows = num_rows;
-    // all_rows_info->all_rows = all_rows;
+
+int main()
+{
+    FILE* file_ptr = fopen("./example.csv", "r");
+    bool headers = true;
+
+    All_Rows* all_rows = get_all_rows(file_ptr, headers);
+    print_extracted_csv(all_rows);
 
     free_resources(all_rows);
     return 0;
