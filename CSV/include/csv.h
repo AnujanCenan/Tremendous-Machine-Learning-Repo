@@ -1,3 +1,6 @@
+#ifndef CSV_H
+#define CSV_H
+
 #include <string.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -17,4 +20,4 @@ DECLARE_DYNAMIC_ARRAY(Row_Info*, All_Rows);
 All_Rows* get_all_rows(FILE* file_ptr, bool headers);
 void print_extracted_csv(All_Rows* all_rows);
 
-
+#endif // CSV_H

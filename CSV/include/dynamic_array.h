@@ -1,3 +1,5 @@
+#ifndef DYNAMIC_ARRAY_H
+#define DYNAMIC_ARRAY_H
 
 /**
  * Macro for generically typed dynamic arrays
@@ -31,3 +33,6 @@
         } \
         arr->data[(arr->size)++] = value; \
     }
+
+
+# endif // DYNAMIC_ARRAY_H
