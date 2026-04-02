@@ -1,8 +1,8 @@
 #include "../include/csv.h"
 
-#define ROW_BUFFER 1000
-#define FIELD_BUFFER 100
-#define MAX_NUM_ROWS 1000
+#define INIT_NUM_COLS 1000
+#define MAX_VALUE_LENGTH 100
+#define INIT_NUM_LINES 20 
 
 #define DECLARE_DYNAMIC_ARRAY(type, type_name) \
     typedef struct {                \
@@ -11,35 +11,25 @@
         size_t capacity;            \
     } type_name;       \
                                     \
-    static inline type* insert_into_arr(type_name *arr, type value)    \
+    static inline void type_name##_append(type_name* arr, type value)    \
     { \
-        if (arr->size >= arr->capacity) { \
-            arr->capacity = arr->capacity ? arr->capacity * 2 : 1; \
+        if (arr->size >= arr->capacity) \
+        { \
+            printf("Need to realloc; capacity to small\n"); \
+            arr->capacity = arr->capacity > 0 ? arr->capacity * 2 : 1; \
             arr->data = realloc(arr->data, sizeof(type) * arr->capacity); \
         } \
-        arr->data[arr->size++] = value; \
+        if (arr->data == NULL) \
+        { \
+            printf("Realloc seems to have failed -- may cause data issues!\n"); \
+        } \
+        arr->data[(arr->size)++] = value; \
     }
-    
-
-struct csv_row_info {
-    char** row;
-    int num_fields;
-};
-
-struct all_rows_info
-{
-    Csv_Row_Info** all_rows;
-    int num_rows;
-};
-
-DECLARE_DYNAMIC_ARRAY(char***, all_rows);
-DECLARE_DYNAMIC_ARRAY(char**, single_row);
 
 
+DECLARE_DYNAMIC_ARRAY(char*, Row_Info);
 
-
-typedef struct csv_row_info     Csv_Row_Info;
-typedef struct all_rows_info    All_Rows_Info;
+DECLARE_DYNAMIC_ARRAY(Row_Info*, All_Rows);
 
 
 
@@ -50,53 +40,23 @@ typedef struct all_rows_info    All_Rows_Info;
  * Frees the all_rows array.
  * Frees the all_rows_info wrapper.
  */
-void free_resources(All_Rows_Info* all_rows_info)
+void free_resources(All_Rows* all_rows_info)
 {
-
-    int num_rows = all_rows_info->num_rows;
-    Csv_Row_Info** all_rows = all_rows_info->all_rows;
-
-    for (int row_num = 0; row_num < num_rows; ++row_num)
+    // Row_Info* row_info = all_rows_info.data;
+    
+    for (int i = 0; i < all_rows_info->size; ++i)
     {
-        Csv_Row_Info* curr_row = all_rows[row_num];
-
-        for (int field_num = 0; field_num < curr_row->num_fields; ++field_num)
+        Row_Info* row_info = all_rows_info->data[i];
+        for (int j = 0; j < row_info->size; ++j)
         {
-            free(curr_row->row[field_num]);
+            free(row_info->data[j]);
         }
 
-        free(curr_row->row);
-        free(curr_row);
+        free(row_info);
     }
-    free(all_rows);     // shout out to leaks --atExit -- <program>
+
     free(all_rows_info);
 }
-
-
-/**
- * Inserts (a string value) into the given row/line
- * Parameters
- * - row: array of 'strings' - expect to contain some first k values from line n
- * of the csv file
- * - curr_field: the string to insert into row - a.k.a the complete, most recent 
- * value read from the csv file
- * - row_idx: the next empty position in row
- * - row_capacity: the current capacity of row
- */
-char** insert_into_row(char** row, char* curr_field, int* row_idx, int* row_capacity)
-{
-    if (*row_idx >= *row_capacity)
-    {        
-        *row_capacity = *row_capacity == 0 ? 1 : *row_capacity * 2;
-        row = realloc(row, *row_capacity * sizeof(char *));
-    }
-
-    row[*row_idx] = curr_field;
-    (*row_idx)++;
-
-    return row;
-} 
-
 
 /**
  * Inserts (a string value) into the given row/line
@@ -120,35 +80,19 @@ char* insert_into_field(char* field, char c, int* field_idx, int* field_capacity
     return field;
 }
 
-/**
- * 
- */
-Csv_Row_Info** insert_row_into_table(Csv_Row_Info** all_rows, Csv_Row_Info* row, int* all_rows_idx, int* all_rows_capacity)
-{
-    if (*all_rows_idx >= *all_rows_capacity)
-    {
-        *all_rows_capacity *= 2;
-        all_rows = realloc(all_rows, *all_rows_capacity * sizeof(Csv_Row_Info*));
-    }
-
-    all_rows[*all_rows_idx] = 
-    (*all_rows_idx)++;
-    
-    return all_rows;
-}
-
-
 // private
-Csv_Row_Info* get_row(FILE* f)
+Row_Info* get_row(FILE* f)
 {
-    int row_capacity = ROW_BUFFER;
-    char** row = malloc(row_capacity * sizeof(char *));
+    Row_Info* csv_row_info = malloc(sizeof(Row_Info));
+    csv_row_info->capacity = INIT_NUM_COLS;
+    csv_row_info->data = malloc(INIT_NUM_COLS * sizeof(char *));
+    csv_row_info->size = 0;
+
+    char** row = malloc(INIT_NUM_COLS * sizeof(char *));
     
-    int field_capacity = FIELD_BUFFER;
+    int field_capacity = MAX_VALUE_LENGTH;
     char* curr_field = malloc(field_capacity * sizeof(char *));
 
-    
-    Csv_Row_Info* csv_row_info = malloc(sizeof(Csv_Row_Info));
 
     int row_idx = 0;
     int field_idx = 0;
@@ -182,9 +126,10 @@ Csv_Row_Info* get_row(FILE* f)
         {
             // curr_field[field_idx++] = '\0';
             curr_field = insert_into_field(curr_field, '\0', &field_idx, &field_capacity);
-            // row[row_idx++] = curr_field;
-            row = insert_into_row(row, curr_field, &row_idx, &row_capacity);     // replace with this to handle realloc case
-            curr_field = malloc(FIELD_BUFFER * sizeof(char *));
+            
+            Row_Info_append(csv_row_info, curr_field);
+
+            curr_field = malloc(MAX_VALUE_LENGTH * sizeof(char *));
             field_idx = 0;
         } else 
         {
@@ -199,12 +144,10 @@ Csv_Row_Info* get_row(FILE* f)
     if (field_idx > 0)
     {
         curr_field[field_idx++] = '\0';
-        row[row_idx++] = curr_field;
+        // row[row_idx++] = curr_field;
         // row = insert_into_row(row, curr_field, &row_idx, &row_capacity); 
+        Row_Info_append(csv_row_info, curr_field);
     }
-
-    csv_row_info->num_fields = row_idx;
-    csv_row_info->row = row;
 
     return csv_row_info;
 }
@@ -225,8 +168,8 @@ Csv_Row_Info* get_row(FILE* f)
 
 int main()
 {
-    FILE* f = fopen("./example.csv", "r");
-    if (f == NULL)
+    FILE* file_ptr = fopen("./example.csv", "r");
+    if (file_ptr == NULL)
     {
         fprintf(stderr, "Failed to open the file\n");
         exit(1);
@@ -236,53 +179,56 @@ int main()
 
     if (headers)
     {
-        char c = fgetc(f);
+        char c = fgetc(file_ptr);
         while (c != '\n' && c != '\r')
         {
-            c = fgetc(f);
+            c = fgetc(file_ptr);
         }
     }
 
-    int all_row_capacity = MAX_NUM_ROWS;
-    Csv_Row_Info** all_rows = malloc(all_row_capacity * sizeof(Csv_Row_Info*));
-    int num_rows = 0;
+    int all_row_capacity = INIT_NUM_LINES;
 
-    char c = fgetc(f);
+    // Csv_Row_Info** all_rows = malloc(all_row_capacity * sizeof(Csv_Row_Info*));
+    All_Rows* all_rows = malloc(sizeof(All_Rows));
+    all_rows->capacity = INIT_NUM_LINES;
+    all_rows->data = malloc(INIT_NUM_LINES * sizeof(Row_Info *));
+    all_rows->size = 0;
+
+    char c = fgetc(file_ptr);
     while (c != EOF)
     {
-        ungetc(c, f);
+        ungetc(c, file_ptr);
 
-        // all_rows[num_rows++] = get_row(f);
-        all_rows = insert_row_into_table(all_rows, get_row(f), &num_rows, &all_row_capacity);
-        c = fgetc(f);
+        All_Rows_append(all_rows, get_row(file_ptr));
+        c = fgetc(file_ptr);
     }
 
     int global_num_fields = -1;
-    for (int row_num = 0; row_num < num_rows; ++row_num)
+
+    for (int row_num = 0; row_num < all_rows->size; ++row_num)
     {
-        Csv_Row_Info* curr_csv_row = all_rows[row_num];
+        Row_Info* curr_csv_row = all_rows->data[row_num];
         if (global_num_fields == -1)
         {
-            global_num_fields = curr_csv_row->num_fields;
-        } else if (global_num_fields != curr_csv_row->num_fields)
+            global_num_fields = curr_csv_row->size;
+        } else if (global_num_fields != curr_csv_row->size)
         {
             fprintf(stderr, "I believe you have different number of fields in two lines\n");
         }
         
-        for (int field_num = 0; field_num < curr_csv_row->num_fields; ++field_num)
+        for (int field_num = 0; field_num < curr_csv_row->size; ++field_num)
         {
-            fputs(curr_csv_row->row[field_num], stdout);
+            fputs(curr_csv_row->data[field_num], stdout);
             printf("\t");
         }
 
         printf("\n");
     }
 
-    All_Rows_Info* all_rows_info = malloc(sizeof(All_Rows_Info));     // 0.012
-    all_rows_info->num_rows = num_rows;
-    all_rows_info->all_rows = all_rows;
+    // All_Rows_Info* all_rows_info = malloc(sizeof(All_Rows_Info));     // 0.012
+    // all_rows_info->num_rows = num_rows;
+    // all_rows_info->all_rows = all_rows;
 
-    free_resources(all_rows_info);
-
+    free_resources(all_rows);
     return 0;
 }
