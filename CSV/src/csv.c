@@ -4,7 +4,6 @@
 
 /**
  * Extracts the values from a particular line of a csv file. Mallocs a Row_Info and
- * 
  * chucks those values into a Row_Info dynamic array (vector<char *>).
  * Returns that Row_Info's address
  * 
@@ -63,6 +62,9 @@ Row_Info* get_row(FILE* f)
     {
         Field_Info_append(curr_field_info, '\0');
         Row_Info_append(csv_row_info, curr_field_info);
+    } else {
+        free(curr_field_info->data);        // cheeky bastard
+        free(curr_field_info);
     }
 
     return csv_row_info;
@@ -71,19 +73,19 @@ Row_Info* get_row(FILE* f)
 
 void free_resources(All_Rows* all_rows_info)
 {
-    // Row_Info* row_info = all_rows_info.data;
-    
-    for (int i = 0; i < all_rows_info->size; ++i)
+    for (int row_info_num = 0; row_info_num < all_rows_info->size; ++row_info_num)
     {
-        Row_Info* row_info = all_rows_info->data[i];
-        for (int j = 0; j < row_info->size; ++j)
+        Row_Info* row_info = all_rows_info->data[row_info_num];
+        for (int field_info_num = 0; field_info_num < row_info->size; ++field_info_num)
         {
-            free(row_info->data[j]);
+            Field_Info* field_info = row_info->data[field_info_num];
+            free(field_info->data);
+            free(field_info);
         }
-
+        free(row_info->data);
         free(row_info);
     }
-
+    free(all_rows_info->data);
     free(all_rows_info);
 }
 
@@ -107,11 +109,6 @@ All_Rows* get_all_rows(FILE* file_ptr, bool headers)
     }
 
     All_Rows* all_rows = All_Rows_init(INIT_NUM_LINES);
-    
-    // malloc(sizeof(All_Rows));
-    // all_rows->capacity = INIT_NUM_LINES;
-    // all_rows->data = malloc(INIT_NUM_LINES * sizeof(Row_Info *));
-    // all_rows->size = 0;
 
     char c = fgetc(file_ptr);
     while (c != EOF)
