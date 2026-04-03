@@ -43,6 +43,10 @@ void skip_line(FILE* file_ptr);
  */
 All_Rows* get_all_rows(FILE* file_ptr, bool headers);
 
+All_Rows* get_next_k_row(FILE* file_ptr, int batch_size);
+
+All_Rows* get_next_row(FILE* file_ptr);
+
 
 /**
  * Roughly prints the csv file contents (after extraction) in the same grid 
