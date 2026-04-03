@@ -25,6 +25,13 @@ void free_resources(All_Rows* all_rows_info);
 
 
 /**
+ * If the file pointer is pointing to a line in the csv file, moves the file pointer
+ * across until it moves past a new line character, such that it points to the start
+ * of the next line.
+ */
+void skip_line(FILE* file_ptr);
+
+/**
  * Parameters
  * - file_ptr: an opened file ptr (naturally should point to a .csv file)
  * - hasHeaders: should be set to true if and only if the first line in the csv
