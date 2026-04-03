@@ -126,11 +126,7 @@ All_Rows* get_all_rows(FILE* file_ptr, bool headers)
 
     if (headers)
     {
-        char c = fgetc(file_ptr);
-        while (c != '\n' && c != '\r')
-        {
-            c = fgetc(file_ptr);
-        }
+        skip_line(file_ptr);
     }
 
     c = fgetc(file_ptr);
@@ -151,50 +147,22 @@ All_Rows* get_all_rows(FILE* file_ptr, bool headers)
     return all_rows;
 }
 
-/**
- * file_ptr does not point to the header line
- */
-All_Rows* get_next_row(FILE* file_ptr)
-{
-    if (!file_ptr)
-    {
-        fprintf(stderr, "GET_NEXT_ROW: file_ptr is null - potentially failed to open file\n");
-        exit(1);
-    }
-
-    char c = fgetc(file_ptr);
-    if (c == EOF)
-    {
-        return NULL;
-    }
-
-    ungetc(c, file_ptr);
-    All_Rows* all_rows = All_Rows_init(1);
-    All_Rows_append(all_rows, get_row(file_ptr));
-
-    return all_rows;
-}
 
 All_Rows* get_next_k_row(FILE* file_ptr, int batch_size)
 {
     if (!file_ptr)
     {
-        fprintf(stderr, "GET_NEXT_ROW: file_ptr is null - potentially failed to open file\n");
+        fprintf(stderr, "GET NEXT K ROWS: file_ptr is null - potentially failed to open file\n");
         exit(1);
     }
 
-    
-
-    // if (c == EOF)
-    // {
-    //     return NULL;
-    // }
     char c = fgetc(file_ptr);
     All_Rows* all_rows = All_Rows_init(batch_size);
     for (int curr_batch = 0; curr_batch < batch_size; ++curr_batch)
     {
         if (c == EOF)
         {
+            fclose(file_ptr);
             break;
         }
 
@@ -208,7 +176,20 @@ All_Rows* get_next_k_row(FILE* file_ptr, int batch_size)
     ungetc(c, file_ptr);
 
     return all_rows;
+}
 
+/**
+ * Assumes file_ptr does not point to the header line
+ */
+All_Rows* get_next_row(FILE* file_ptr)
+{
+    if (!file_ptr)
+    {
+        fprintf(stderr, "GET_NEXT_ROW: file_ptr is null - potentially failed to open file\n");
+        exit(1);
+    }
+
+    return get_next_k_row(file_ptr, 1);
 }
 
 void print_extracted_csv(All_Rows* all_rows)
@@ -299,10 +280,9 @@ void test3()
 int main()
 {
     test1();
-    printf("\n\n");
+    printf("\n");
     test2();
-    printf("\n\n");
-
+    printf("\n");
     test3();
     return 0;
 }
